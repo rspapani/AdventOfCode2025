@@ -13,21 +13,46 @@ file = open("d6.txt")
 raws = file.read().splitlines()
 file.close()
 
-rws = """123 328  51 64 
-45 64  387 23 
-6 98  215 314
-*   +   *   + """.splitlines()
+rasws = """
+123 328  51 64 
+ 45 64  387 23 
+  6 98  215 314
+*   +   *   + 
+""".splitlines()[1:]
 
 def proc(x):
-    pass
+    return lmap(int, x.split())
 
-inpt = lmap(proc, raws)
+inpt = lmap(proc, raws[:-1]) + [raws[-1].split()]
+
+ops = {'*' : lambda a, b: a * b,
+       '+' : lambda a, b: a + b}
 
 def f1(li):
-    pass
+    cols = zip(*li)
+    return sum(reduce(ops[col[-1]], 
+                      col[:-1]) 
+               for col in cols)
 
-def f2(li):
-    pass
+raws2 = lzip(*raws[:-1])
+
+def proc2(x):
+    isint = lambda a: a in '1234567890'
+    return ''.join(filter(isint, x))
+
+inpt2 = lmap(proc2, raws2)
+
+def f2(li, bttm):
+    cols = [[]]
+    for col in li:
+        if col:
+            cols[-1].append(int(col))
+        else:
+            cols.append([])
+
+    return sum(reduce(ops[bttm[i]], 
+                      col) 
+               for i, col in enumerate(cols))
 
 print("Part 1: ", f1(inpt))
-print("Part 2: ", f2(inpt))
+print("Part 2: ", f2(inpt2, inpt[-1]))
