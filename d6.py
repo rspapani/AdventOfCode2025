@@ -9,12 +9,14 @@ import re
 
 from aoc import *
 
-file = open("d1.txt")
+file = open("d6.txt")
 raws = file.read().splitlines()
 file.close()
 
-rws = """
-""".splitlines()
+rws = """123 328  51 64 
+45 64  387 23 
+6 98  215 314
+*   +   *   + """.splitlines()
 
 def proc(x):
     pass
