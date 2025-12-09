@@ -79,12 +79,12 @@ def f1(li, n = 1000):
 
     return prod(sorted(circs)[-3:])
 
-get_graph = lambda x, graphs:next(filter(
-                                        lambda g: x in g[1],
-                                        enumerate(graphs)
-                                        ),
-                                (-1, 0)
-                                )[0]
+get_graph = lambda x, graphs: next(filter(
+                                            lambda g: x in g[1],
+                                            enumerate(graphs)
+                                            ),
+                                    (-1, 0)
+                                    )[0]
 
 def f2(li):
     dists = getdists(li)
@@ -111,9 +111,8 @@ def f2(li):
             graphs[gi].add(j)
 
         elif gi != gj:
-            mn, mx = sorted((gi, gj))
-            graphs[mn] |= graphs[mx]
-            graphs.pop(mx)
+            graphs[gi] |= graphs[gj]
+            graphs.pop(gj)
 
         if seen == len(li) and len(graphs) == 1:
             return li[i][0] * li[j][0]
