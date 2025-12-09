@@ -79,13 +79,12 @@ def f1(li, n = 1000):
 
     return prod(sorted(circs)[-3:])
 
-def get_graph(x, graphs):
-    return next(filter(
-                        lambda g: x in g[1],
-                        enumerate(graphs)
-                        ),
-                (-1, 0)
-                )[0]
+get_graph = lambda x, graphs:next(filter(
+                                        lambda g: x in g[1],
+                                        enumerate(graphs)
+                                        ),
+                                (-1, 0)
+                                )[0]
 
 def f2(li):
     dists = getdists(li)
