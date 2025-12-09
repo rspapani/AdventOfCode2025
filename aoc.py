@@ -495,8 +495,23 @@ def ads(n):
 adjs = lambda k: map(lambda x: k + x, ads(len(k)))
 
 
+ctoi = lambda x: (int(x.real), int(x.imag))
+itoc = lambda x: (x[0] + (x[1]*1j))
+
+#complex rotation
+crot = [(1j)**i for i in range(4)]
+cajs = lambda x: (x + k 
+                  for k in crot)
 
 
+#complex diagonal
+cdag = [(1 + 1j) * (1j)**i for i in range(4)]
+cads = lambda x: (x + k 
+                  for k in cdag)
+
+#2d adjacents
+cadjs = lambda x: (x + k 
+                    for k in cdag + crot)
 
 
 
