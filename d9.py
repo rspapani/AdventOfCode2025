@@ -1,8 +1,5 @@
 ## Time Stats:
-# (3.12.7) ➜ AdventOfCode2025 (main) ✗ time python d9.py
-# Part 1:  4759930955
-# Part 2:  1525241870
-# python d9.py  0.80s user 0.04s system 92% cpu 0.904 total
+# 1.41s user 0.06s system 95% cpu 1.540 total
 
 # from collections import defaultdict as ddict, Counter as count
 # from functools import reduce,  cmp_to_key, partial as par, cache
@@ -40,7 +37,7 @@ def proc(x):
 inpt = lmap(proc, raws)
 area = lambda x: (abs(x.real) + 1) * (abs(x.imag) + 1)
 
-def downsample(inpt, ratio=1):
+def downsample(inpt, ratio=2):
     xs = sorted(set(p.real for p in inpt))
     ys = sorted(set(p.imag for p in inpt))
     
@@ -63,6 +60,8 @@ def f1(li):
                for i, a in enumerate(li[:-1])
                for _, b in enumerate(li[i + 1:]))
 
+vert = lambda a, b: (b - a).real == 0
+
 @cache
 def points(a, b):
     if a == b:
@@ -73,8 +72,6 @@ def points(a, b):
 
     return tuple(a + (x * step)
                  for x in range(int(abs(d)) + 1))
-
-vert = lambda a, b: (b - a).real == 0
 
 def splitbounds(bounds):
     vbounds, vbends = set(), set()
@@ -110,7 +107,7 @@ def collisions(a, b, incl=True):
             (len(dbends & checks) if incl else 0)
 
 @cache
-def interior(a, b, scope = 0):
+def interior(a, b, scope = 1):
     d = b - a
     dx = d.real
     dy = d - dx
