@@ -10,6 +10,7 @@ import re
 from aoc import *
 
 file = open("d9.txt")
+# file = open("d9bb.txt")
 raws = file.read().splitlines()
 file.close()
 
@@ -53,6 +54,7 @@ def f1(li):
                for i, a in enumerate(li[:-1])
                for _, b in enumerate(li[i + 1:]))
 
+@cache
 def points(a, b):
     d = b - a
     step = d/abs(d)

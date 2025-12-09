@@ -75,63 +75,38 @@ def points(a, b):
                  for x in range(int(abs(d)) + 1))
 
 def splitbounds(bounds):
-    vbounds = set()
-    hbounds = set()
+    vbounds, vbends = set(), set()
+    hbounds, hbends = set(), set()
 
     for a, b in bounds:
         if vert(a, b):
-            vbounds.update(points(a, b))
+            vbounds.update(points(a, b)[:-1])
+            vbends.add(b)
 
         else:
-            hbounds.update(points(a, b))
+            hbounds.update(points(a, b)[:-1])
+            hbends.add(b)
 
-    return vbounds, hbounds
+    return vbounds, vbends, hbounds, hbends
 
+miny = min(a.imag for a in inpt) - 1
 bounds = zip(inpt, inpt[1:] + inpt[:1])
-vbounds, hbounds = splitbounds(bounds)
-
-def flood(li, bounds):
-# def flood(li):
-    bounds = {bnd
-              for a, b in zip(li, li[1:] + li[:1])
-              for bnd in points(a, b)
-              }    
-    mx = max(p.real for p in li)
-    my = max(p.imag for p in li)
-
-    valid = lambda x: -1 <= x.real <= mx + 1 and \
-                      -1 <= x.imag <= my + 1
-    
-    done = set()
-    curr = {-1 + -1j}
-
-    while curr:
-        curr = {np
-                for p in curr
-                for np in (p + (1j**k) for k in range(4))
-                if np not in done 
-                and np not in bounds
-                and valid(np)}
-
-        done |= curr
-    
-    return done
-
-# outside = flood(inpt)
-
-outside = flood(inpt, vbounds | hbounds )
-inside = lambda x: x not in outside
-
+vbounds, vbends, hbounds, hbends = splitbounds(bounds)
 print("precompute finished!")
 
 @cache
-def collisions(a, b):
+def collisions(a, b, incl=True):
     if vert(a, b):
         dbounds = hbounds
+        dbends = hbends
     else:
         dbounds = vbounds
+        dbends = vbends
 
-    return len(dbounds & set(points(a, b)))
+    checks = set(points(a, b))
+
+    return len(dbounds & checks) + \
+            (len(dbends & checks) if incl else 0)
 
 @cache
 def interior(a, b, scope = 1):
@@ -150,9 +125,11 @@ def interior(a, b, scope = 1):
     return ((p1, p2), (p1, p3),
             (p2, p4), (p3, p4))
 
-uniform = lambda a, b: not any(collisions(na, nb) for na, nb in interior(a, b))
+uniform = lambda a, b: not any(collisions(na, nb) for na, nb in interior(a, b, 1))
 
-valid = lambda a, b: inside(interior(a, b)[0][0]) and uniform(a, b)
+inside = lambda x: collisions(x, x.real + miny*1j, False) % 2 == 1
+
+valid = lambda a, b: inside(interior(a, b, 1)[0][0]) and uniform(a, b)
 
 def f2(li):
     return max(area_scaled(a, b)
