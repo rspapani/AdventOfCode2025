@@ -23,53 +23,42 @@ sraws = """[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
 [.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}
 """.splitlines()
 
-# raws = raws[:1]
-
+@cache
 def ttob(tup):
-    outs = 0
-    for val in tup:
-        outs |= (1<<val)
-
-    return outs
-
+    return reduce(lambda a, b: a ^ (1<<b),
+                  tup, 0)
 
 def proc(x):
     line = x.split()
-    diag = [i for i, ch 
-            in enumerate(line[0][1:-1])
-            if ch =='#']
+    
+    diag = tuple((i for i, ch 
+                    in enumerate(line[0][1:-1])
+                    if ch =='#'))
+    
+    tobut = lambda b: ttob(map(int, 
+                               b[1:-1].split(',')
+                            ))
     butts = line[1:-1]
 
     jolts = map(int, line[-1][1:-1].split(','))
-
-    tobut = lambda b: ttob(map(int, b[1:-1].split(',')))
 
     return ttob(diag), lmap(tobut, butts), tuple(jolts)
 
 inpt = lmap(proc, raws)
 
-def bfs(targ, paths):
-    done = set()
-    curr = {0}
-
-    i = -1
-    while targ not in done:
-        done |= curr
-        curr = {cr^pth
-                for cr in curr
-                for pth in paths
-                if (cr^pth) not in done}
-        
-        i += 1
-        
-    return i
-
-# print(inpt)
+def dfs(targ, paths):
+    if not targ:
+        return 0
+    
+    elif not paths:
+        return math.inf
+    
+    return min(dfs(targ ^ paths[0], paths[1:]) + 1,
+               dfs(targ, paths[1:]))
 
 def f1(li):
-    return sum(bfs(targ, paths)
-               for targ, paths, _
-               in li)
+    return sum(dfs(targ, paths)
+               for targ, paths, _ in li)
 
 def b2v(n, b):
     pres = lambda x: int(bool(b & (1<<x)))
@@ -93,7 +82,6 @@ def solverow(targ, pths):
 
     res = solveILP(a, b, nx)
     return int(res.x.sum())
-
 
 def f2(li):
     return sum(solverow(targ, paths)
