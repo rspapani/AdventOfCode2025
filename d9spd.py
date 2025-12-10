@@ -5,6 +5,9 @@
 # BigBoy
 # 56.97s user 23.48s system 90% cpu 1:29.27 total
 
+# BigBoy Answers
+# p1: 275972310
+# p2: 207548208
 
 import numpy as np
 from scipy import ndimage
@@ -14,8 +17,8 @@ BATCH_SIZE = 10**7
 
 lmap = lambda f, li: [f(x) for x in li]
 
-# file = open("d9.txt")
-file = open("d9.bb")
+file = open("d9.txt")
+# file = open("d9.bb")
 raws = file.read().splitlines()
 file.close()
 
@@ -151,7 +154,3 @@ def f2():
     return 0 #Critical Fault
 
 print("Part 2: ", int(f2()))
-
-# BigBoy Answers
-# p1: 275972310
-# p2: 207548208

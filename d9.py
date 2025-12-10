@@ -1,5 +1,5 @@
 ## Time Stats:
-# 1.41s user 0.06s system 95% cpu 1.540 total
+# 0.92s user 0.05s system 92% cpu 1.041 total
 
 # from collections import defaultdict as ddict, Counter as count
 # from functools import reduce,  cmp_to_key, partial as par, cache
@@ -56,10 +56,17 @@ inpt, xinv, yinv = downsample(inpt)
 upsample = lambda a: xinv[a.real] + (yinv[a.imag] * 1j)
 area_scaled = lambda a, b: area(upsample(b) - upsample(a))
 
-def f1(li):
-    return max(area_scaled(a,b)
-               for i, a in enumerate(li[:-1])
-               for _, b in enumerate(li[i + 1:]))
+# @cache
+# def area_scaled(a, b):
+#     return area(upsample(b) - upsample(a))
+
+areas = sorted([(area_scaled(a,b), a, b)
+                    for i, a in enumerate(inpt[:-1])
+                    for _, b in enumerate(inpt[i + 1:])],
+                key = lambda x: x[0])
+
+def f1():
+    return areas[-1][0]
 
 vert = lambda a, b: (b - a).real == 0
 
@@ -117,12 +124,8 @@ def flood(li, bounds):
     
     return done
 
-# outside = flood(inpt)
-
 outside = flood(inpt, vbounds | hbounds )
 inside = lambda x: x not in outside
-
-print("precompute finished!")
 
 @cache
 def collisions(a, b):
@@ -154,15 +157,13 @@ uniform = lambda a, b: not any(collisions(na, nb) for na, nb in interior(a, b))
 
 valid = lambda a, b: inside(interior(a, b)[0][0]) and uniform(a, b)
 
-def f2(li):
-    return max(area_scaled(a, b)
-               for i, a in enumerate(li[:-1])
-               for _, b in enumerate(li[i + 1:])
-               if valid(a, b)
-               )
+def f2():
+    return next(filter(lambda x: valid(*x[1:]),
+                       areas[::-1]))[0]
 
-print("Part 1: ", int(f1(inpt)))
-print("Part 2: ", int(f2(inpt)))
+print("precompute finished!")
+print("Part 1: ", int(f1()))
+print("Part 2: ", int(f2()))
 
 # wrong answers
 # 1525207666
