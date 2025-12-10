@@ -1,41 +1,27 @@
 ## Time Stats:
-# 1.41s user 0.06s system 95% cpu 1.540 total
+# Standard
+# 0.17s user 0.04s system 53% cpu 0.404 total
 
-# from collections import defaultdict as ddict, Counter as count
-# from functools import reduce,  cmp_to_key, partial as par, cache
-# from math import prod, sqrt as root, lcm as lcm, gcd as gcd
-# from operator import itemgetter as ig
-# from re import findall as rall
+# BigBoy
+# 56.97s user 23.48s system 90% cpu 1:29.27 total
 
-# import math
-# import re
 
-# from aoc import *
-
-from functools import cache
 import numpy as np
+from scipy import ndimage
+
+# if u go higher it will probably crash ur computer
+BATCH_SIZE = 10**7
 
 lmap = lambda f, li: [f(x) for x in li]
-cp = lambda x, y: x + (y * 1j)
 
 # file = open("d9.txt")
-file = open("d9bb.txt")
+file = open("d9.bb")
 raws = file.read().splitlines()
 file.close()
 
-rawss = """7,1
-11,1
-11,7
-9,7
-9,5
-2,5
-2,3
-7,3
-""".splitlines()
-
 def proc(x):
     a,b = lmap(int, x.split(','))
-    return cp(a, b)
+    return complex(a, b)
 
 inpt = np.array(lmap(proc, raws))
 
@@ -55,6 +41,8 @@ def f1():
 
 print("Part 1: ", int(f1()))
 
+## Pre Computes
+# Downsampling
 def downsample(inpt, ratio=2):
     x, y = inpt.real, inpt.imag
     
@@ -66,22 +54,12 @@ def downsample(inpt, ratio=2):
     
     downsampled = xi + yi * 1j
     
-    idx_map = {complex(p): i for i, p in enumerate(downsampled)}
-    
-    def upsample(p):
-        return idx_map[complex(p)]
-    
-    assert all(upsample(p) == i for i, p in enumerate(downsampled)), \
-        "upsample doesn't preserve order"
-    
-    return downsampled, upsample
+    return downsampled
 
-downsampled, upsample = downsample(inpt)
-area_scaled = lambda a, b: areas[upsample(a), upsample(b)]
-
+downsampled = downsample(inpt)
 vert = lambda a, b: (b - a).real == 0
 
-@cache
+# Boundaries
 def points(a, b):
     if a == b:
         return (a,)
@@ -93,95 +71,86 @@ def points(a, b):
                  for x in range(int(abs(d)) + 1))
 
 def splitbounds(bounds):
-    vbounds, vbends = set(), set()
-    hbounds, hbends = set(), set()
+    vbounds = set()
+    hbounds = set()
 
     for a, b in bounds:
         if vert(a, b):
-            vbounds.update(points(a, b)[:-1])
-            vbends.add(b)
+            vbounds.update(points(a, b))
 
         else:
-            hbounds.update(points(a, b)[:-1])
-            hbends.add(b)
+            hbounds.update(points(a, b))
 
-    return vbounds, vbends, hbounds, hbends
+    return np.array(list(vbounds)), np.array(list(hbounds))
 
-bounds = zip(inpt, inpt[1:] + inpt[:1])
-vbounds, vbends, hbounds, hbends = splitbounds(bounds)
+bounds = zip(downsampled, np.roll(downsampled, -1))
+vbounds, hbounds = splitbounds(bounds)
 
-def flood(li, bounds):    
-    mx = max(p.real for p in li)
-    my = max(p.imag for p in li)
-
-    valid = lambda x: -1 <= x.real <= mx + 1 and \
-                      -1 <= x.imag <= my + 1
+# Floodfill
+def flood(li, vbounds, hbounds):
+    mx = int(max(p.real for p in li))
+    my = int(max(p.imag for p in li))
     
-    done = set()
-    curr = {-1 + -1j}
-
-    while curr:
-        curr = {np
-                for p in curr
-                for np in (p + (1j**k) for k in range(4))
-                if np not in done 
-                and np not in bounds
-                and valid(np)}
-
-        done |= curr
+    w, h = mx + 3, my + 3
     
-    return done
+    gaps = np.ones((w, h), dtype=bool)
+    
+    bounds = np.concatenate([vbounds, hbounds])
+    bx = (bounds.real + 1).astype(int)
+    by = (bounds.imag + 1).astype(int)
+    gaps[bx, by] = False
+    
+    labeled, _ = ndimage.label(gaps)
+    
+    return labeled == labeled[0, 0]
 
-outside = flood(inpt, vbounds | vbends | hbounds | hbends)
-inside = lambda x: x not in outside
+outside = flood(downsampled, vbounds, hbounds)
+inside_grid = ~outside[1:-1, 1:-1]
+
+prefix = np.cumsum(np.cumsum(inside_grid.astype(np.int32), axis=0), axis=1)
+prefix = np.pad(prefix, ((1, 0), (1, 0)), mode='constant', constant_values=0)
 
 print("precompute finished!")
 
-@cache
-def collisions(a, b, incl=True):
-    if vert(a, b):
-        dbounds = hbounds
-        dbends = hbends
-    else:
-        dbounds = vbounds
-        dbends = vbends
+#why yes I have heard of overparametrizing
+def batch_covered(batch_indices, n, x, y, prefix, areas):
+    i, j = np.divmod(batch_indices, n)
+    mask = i < j
+    i, j = i[mask], j[mask]
+    
+    mnx = np.minimum(x[i], x[j])
+    mxx = np.maximum(x[i], x[j])
+    mny = np.minimum(y[i], y[j])
+    mxy = np.maximum(y[i], y[j])
+    
+    present = prefix[mxx+1, mxy+1] + prefix[mnx, mny]\
+            - (prefix[mnx, mxy+1] + prefix[mxx+1, mny]) 
+    
+    needed = (mxx - mnx + 1) * (mxy - mny + 1)
+    
+    valid = present == needed
+    if valid.any():
+        first_valid = np.argmax(valid)
+        return areas[i[first_valid], j[first_valid]]
+    
+    return False
 
-    checks = set(points(a, b))
+def f2():
+    batch_size = BATCH_SIZE
+    n = len(downsampled)
+    x = downsampled.real.astype(np.int32)
+    y = downsampled.imag.astype(np.int32)
+    
+    areaidxs = np.argsort(areas[:n, :n].ravel())[::-1]
+    
+    for start in range(0, len(areaidxs), batch_size):
+        res = batch_covered(areaidxs[start:start + batch_size], n, x, y, prefix, areas)
+        if res:
+            return res
+        
+    return 0 #Critical Fault
 
-    return len(dbounds & checks) + \
-            (len(dbends & checks) if incl else 0)
-
-@cache
-def interior(a, b, scope = 1):
-    d = b - a
-    dx = d.real
-    dy = d - dx
-
-    adx = (dx // abs(dx) if dx else 0) * scope
-    ady = (dy.imag // abs(dy.imag) if dy.imag else 0) * 1j * scope
-
-    p1 = a + adx + ady
-    p2 = (a + ady) + (dx - adx)
-    p3 = (a + adx) + (dy - ady)
-    p4 = b - adx - ady
-
-    return ((p1, p2), (p1, p3),
-            (p2, p4), (p3, p4))
-
-uniform = lambda a, b: not any(collisions(na, nb) for na, nb in interior(a, b, 1))
-
-inside = lambda x: collisions(x, x.real + miny*1j, False) % 2 == 1
-
-valid = lambda a, b: inside(interior(a, b, 1)[0][0]) and uniform(a, b)
-
-def f2(li):
-    return max(area_scaled(a, b)
-               for i, a in enumerate(li[:-1])
-               for _, b in enumerate(li[i + 1:])
-               if valid(a, b)
-               )
-
-# print("Part 2: ", int(f2(inpt)))
+print("Part 2: ", int(f2()))
 
 # BigBoy Answers
 # p1: 275972310
