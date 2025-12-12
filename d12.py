@@ -1,4 +1,5 @@
 #An actual solution to day 12, solves the actual problem instead of copping out
+#runtime: 2235.57s user 55.69s system 159% cpu 23:58.30 total
 
 from collections import defaultdict as ddict, Counter as count
 from functools import reduce,  cmp_to_key, partial as par, cache
@@ -8,12 +9,6 @@ from re import findall as rall
 
 import math
 import re
-
-#FUCK YOU ERIC IM SOLVING THIS PROBLEM LIKE A MAN
-from ortools.sat.python import cp_model
-
-from aoc import *
-
 
 rawss = """0:
 ###
