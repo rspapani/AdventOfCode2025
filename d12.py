@@ -1,3 +1,5 @@
+#An actual solution to day 12, solves the actual problem instead of copping out
+
 from collections import defaultdict as ddict, Counter as count
 from functools import reduce,  cmp_to_key, partial as par, cache
 from math import prod, sqrt as root, lcm as lcm, gcd as gcd
@@ -7,11 +9,11 @@ from re import findall as rall
 import math
 import re
 
+#FUCK YOU ERIC IM SOLVING THIS PROBLEM LIKE A MAN
+from ortools.sat.python import cp_model
+
 from aoc import *
 
-file = open("d12.txt")
-raws = file.read()
-file.close()
 
 rawss = """0:
 ###
@@ -48,6 +50,13 @@ rawss = """0:
 12x5: 1 0 1 0 3 2
 """
 
+from ortools.sat.python import cp_model
+from aoc import *
+
+file = open("d12.txt")
+raws = file.read()
+file.close()
+
 raws = raws.split('\n\n')
 
 def proc(x):
@@ -67,104 +76,106 @@ def loadshape(shape):
 
 shapes = [loadshape(chunk.splitlines()[1:])
           for chunk in raws[:-1]]
-inpt = lmap(proc, raws[-1].splitlines())
 
-print(shapes, inpt)
+rotate = lambda shape, n: tuple(k * ((1j)**n) for k in shape)
+allrotations = lambda shape: [rotate(shape, i) for i in range(4)]
 
-@cache
-def rotate(shape):
-    return tuple(k * (1j) for k in shape)
+ctot = lambda p: (int(p.real), int(p.imag))
+
+def dedup(shapes):
+    outs = []
+
+    for shape in shapes:
+        curr = set(shape)
+        if not any(all(p in curr
+                       for p in pv)
+                   for pv in outs):
+            outs.append(shape)
+
+    return outs
+
+rotations = [dedup(allrotations(shape))
+             for _, shape in enumerate(shapes)]
 
 @cache
 def translate(pos, shape):
     shift = complex(*pos) + complex(1, 1)
     return tuple(k + shift for k in shape)
 
-def canfit(dims, reqs):
-    print(dims)
-    mx, my = dims
-    space = [[0 for _ in range(mx)] 
-             for _ in range(my)]
-
-    def get(k):
-        kx, ky = int(k.real), int(k.imag)
-        return space[ky][kx]
-
-    def put(k, val = 1):
-        kx, ky = int(k.real), int(k.imag)
-        space[ky][kx] = val
-
-    def place(shape):
-        for p in shape:
-            put(p, 1)
-
-    def remove(shape):
-        for p in shape:
-            put(p, 0)
-
-    valid = lambda k: 0 <= k.real < mx and \
-                      0 <= k.imag < my and \
-                      get(k) == 0
-    
-    canplace = lambda shape: all(valid(p) for p in shape)
-    coords = [(x, y) for x in range(mx) 
-                     for y in range(my)]
-
-    n = len(reqs)
-    steps = 0
-    def step(i):
-        nonlocal steps
-        # print(steps, i)
-        if i == n:
-            return True
-        elif reqs[i] == 0:
-            return step(i + 1)
-        
-        curr = shapes[i]
-
-        for r in range(4):
-            curr = rotate(curr)
-            for pos in coords:
-
-                if get(complex(*pos)) == 0:
-
-                    cand = translate(pos, curr)
-                    if canplace(cand):
-                        place(cand)
-                        reqs[i] -= 1
-
-                        if step(i):
-                            return True
-                        
-                        remove(cand)
-                        reqs[i] += 1
-                
-        return False  
-
-    return step(0)
-
-@cache
-def area(i):
-    # return 9
-    return len(shapes[i])
-
-for i, _ in enumerate(shapes):
-    print(i, area(i))
+areas = [len(shape)
+         for _, shape in enumerate(shapes)]
 
 def hasspace(dim, reqs):
     available = prod(dim)
-    needed = sum(cnt*area(i) 
+    needed = sum(cnt*areas[i] 
                  for i, cnt in enumerate(reqs))
     
-    print(available, needed)
     return available >= needed
 
-def f1(li):
-    return sum(hasspace(dim, reqs)
-               for dim, reqs in li)
+@cache
+def get_squares(x, y, si, ri):
+    shape = rotations[si][ri]
+    return translate((x, y), shape)
 
-def f2(li):
-    pass
+inpt = lmap(proc, raws[-1].splitlines())
+
+print("PRECOMPUTE FINISHED")
+
+def feasible(dim, reqs):
+    print(f"MODELING {dim} {reqs}")
+
+    mx, my = dim
+
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = 60
+    model = cp_model.CpModel()
+
+    bools = {}
+    collisions = [[] for _ in range(mx * my)]
+    counts = [[] for _ in shapes]
+
+    ptoi = lambda p: int((p.imag * mx) + p.real)
+
+    for x in range(mx - 2):
+        for y in range(my - 2):
+            for si, _ in enumerate(shapes):
+                for ri, _ in enumerate(rotations[si]):
+                    key = (x, y, si, ri)
+                    
+                    bools[key] = model.NewBoolVar(f"{x}_{y}_{si}_{ri}")
+
+                    counts[si].append(bools[key])
+                    for square in get_squares(*key):
+                        collisions[ptoi(square)].append(bools[key])
+
+    # print(f"VECTOR DEFINED WITH {len(bools)} VARS")
+    for coll in collisions:
+        model.Add(sum(coll) <= 1)
+
+    for i, count in enumerate(counts):
+        model.Add(sum(count) == reqs[i])
+
+    # print(f"CONSTRAINTS DEFINED: {len(counts) + len(collisions)}")
+
+    status = solver.Solve(model)
+
+    if status == cp_model.FEASIBLE or status == cp_model.OPTIMAL:
+        print("FEASIBLE")
+        return True
+    elif status == cp_model.INFEASIBLE:
+        print("INFEASIBLE")
+        return False
+    else:
+        print(f"TIMEOUT ON {dim} {reqs}")
+        return False
+
+def f1(li):
+    return sum(feasible(dim, reqs)
+               for dim, reqs in li
+               if hasspace(dim, reqs))
 
 print("Part 1: ", f1(inpt))
+
+def f2(li):
+    return ":)"
 print("Part 2: ", f2(inpt))
