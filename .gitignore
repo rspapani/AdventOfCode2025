@@ -1,5 +1,6 @@
 #removing inputs
 *.txt 
+*reddit*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

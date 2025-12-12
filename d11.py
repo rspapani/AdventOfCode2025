@@ -1,17 +1,14 @@
-from collections import defaultdict as ddict, Counter as count
-from functools import reduce,  cmp_to_key, partial as par, cache
-from math import prod, sqrt as root, lcm as lcm, gcd as gcd
-from operator import itemgetter as ig
-from re import findall as rall
+# from collections import defaultdict as ddict, Counter as count
+# from functools import reduce,  cmp_to_key, partial as par, cache
+# from math import prod, sqrt as root, lcm as lcm, gcd as gcd
+# from operator import itemgetter as ig
+# from re import findall as rall
 
-import math
-import re
+# import math
+# import re
 
-from aoc import *
+# from aoc import *
 
-file = open("d11.txt")
-raws = file.read().splitlines()
-file.close()
 
 rawss = """aaa: you hhh
 you: bbb ccc
@@ -39,6 +36,14 @@ fff: ggg hhh
 ggg: out
 hhh: out
 """.splitlines()
+
+from collections import defaultdict as ddict
+from functools import cache
+from math import prod 
+
+file = open("d11.txt")
+raws = file.read().splitlines()
+file.close()
 
 def proc(x):
     graph = ddict(list)

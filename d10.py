@@ -40,7 +40,10 @@ def proc(x):
                             ))
     butts = line[1:-1]
 
-    jolts = map(int, line[-1][1:-1].split(','))
+    jolts = lmap(int, line[-1][1:-1].split(','))
+
+    # if len(jolts) >= len(butts):
+    #     print("NOT LINEARLY INDEPENDENT")
 
     return ttob(diag), lmap(tobut, butts), tuple(jolts)
 
